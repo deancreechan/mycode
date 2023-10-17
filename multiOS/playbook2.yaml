@@ -1,0 +1,42 @@
+---
+- name: Playbook to Execute OS-Specific Tasks
+  hosts: planetexpress:windows
+  gather_facts: yes
+
+  tasks:
+    # Prechecks for all Linux distributions
+    - name: Prechecks (Linux general)
+      ansible.builtin.import_tasks: tasks/prechecks_all_distros.yaml
+      when: ansible_facts['os_family'] != "Windows"
+
+    # Precheck specific to Ubuntu
+    - name: Precheck (Ubuntu only)
+      ansible.builtin.import_tasks: tasks/prechecks_ubuntu.yaml
+      when: ansible_facts['distribution'] == "Ubuntu"
+
+    # Determine the appropriate tasks file based on OS/Distribution
+    - name: Set task file for Ubuntu
+      set_fact:
+        task_file: 'tasks/ubuntu.yaml'
+      when: ansible_facts['distribution'] == "Ubuntu"
+
+    - name: Set task file for CentOS
+      set_fact:
+        task_file: 'tasks/centos.yaml'
+      when: ansible_facts['distribution'] == "CentOS"
+
+    - name: Set task file for Windows
+      set_fact:
+        task_file: 'tasks/windows.yaml'
+      when: ansible_facts['os_family'] == "Windows"
+
+    - name: Set task file for RedHat (this might overlap with CentOS)
+      set_fact:
+        task_file: 'tasks/redhat.yaml'
+      when: ansible_facts['os_family'] == "RedHat"
+
+    # Include the determined tasks based on the set task_file
+    - name: Include OS-specific tasks
+      ansible.builtin.include_tasks: "{{ task_file }}"
+      when: task_file is defined
+
